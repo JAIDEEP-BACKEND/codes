@@ -4,7 +4,7 @@ using namespace std;
 class Student {
 public:
     void showName() {
-        cout << "My name is Ali." << endl;
+        cout << "This is my class." << endl;
     }
 };
 
