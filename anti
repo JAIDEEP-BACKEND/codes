@@ -1,0 +1,17 @@
+Build a modern React TypeScript (TSX) web app called "Keyboard Warrior Arena".
+
+The app should have a dark cyberpunk UI with neon accents, smooth animations, and a highly interactive design.
+
+Core features:
+
+- Real-time typing test with a displayed paragraph
+- Track typing speed (WPM), accuracy, and error count
+- Implement a "rage meter" that increases when the user presses backspace frequently or makes rapid mistakes
+- Show live funny commentary based on performance (e.g., slow typing, high errors, rage level)
+- Include a simulated opponent that types with dynamic speed and mistakes to mimic real gameplay
+- Display a results screen with WPM, accuracy, rage level, and winner
+- Add a shareable result card UI
+
+Use Tailwind CSS for styling and Framer Motion for animations.
+
+Ensure the UI is highly polished, responsive, and visually engaging.
