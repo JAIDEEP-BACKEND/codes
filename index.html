@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KidoAssembly - Full Learning Adventures</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f3f4f6;
+            background-image: radial-gradient(circle at top left, #e0e7ff 0%, #f3e8ff 100%);
+            min-height: 100vh;
+        }
+        
+        /* Animations */
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .animate-pop-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+
+        @keyframes floatUp { 0% { transform: translateY(100%); opacity: 0; } 10% { transform: translateY(0); opacity: 1; } 90% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-20px); opacity: 0; } }
+        .toast { animation: floatUp 3s ease-in-out forwards; }
+
+        @keyframes spinSlow { 100% { transform: rotate(360deg); } }
+        .level-up-glow { animation: spinSlow 4s linear infinite; }
+
+        /* AI Pet Animations */
+        @keyframes bounceHover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .pet-float { animation: bounceHover 3s ease-in-out infinite; }
+        .speech-bubble { transition: opacity 0.3s, transform 0.3s; transform-origin: bottom right; }
+        
+        @keyframes blink { 0%, 96%, 98% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+        .pet-eye { transform-origin: center; transform-box: fill-box; animation: blink 4s infinite; transition: fill 0.3s, transform 0.3s; }
+        .pet-eye-happy { fill: #4ade80 !important; animation: none; transform: scale(1.1); }
+        
+        @keyframes hoverShadow { 0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.2; } 50% { transform: translateX(-50%) scale(0.8); opacity: 0.1; } }
+        .shadow-pulse { animation: hoverShadow 3s ease-in-out infinite; }
+        
+        @keyframes spinHappy { 0% { transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(1.2); } 100% { transform: rotate(360deg) scale(1); } }
+        .animate-spin-happy { animation: spinHappy 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* Memory Card Flip */
+        .perspective { perspective: 1000px; }
+        .card-inner { transition: transform 0.6s; transform-style: preserve-3d; }
+        .card.flipped .card-inner { transform: rotateY(180deg); }
+        .card-front, .card-back { backface-visibility: hidden; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .card-back { transform: rotateY(180deg); }
+
+        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.6); }
+        .progress-bar-fill { transition: width 0.5s ease-out; }
+    </style>
+</head>
+<body class="text-gray-800 antialiased overflow-x-hidden pb-10">
+
+    <!-- AI Pet Companion -->
+    <div id="ai-pet" class="fixed bottom-6 right-6 z-50 flex flex-col items-end hidden">
+        <div id="pet-speech" class="bg-white px-4 py-2 rounded-2xl rounded-br-none shadow-lg border-2 border-purple-200 text-sm font-bold text-purple-700 mb-2 opacity-0 scale-0 speech-bubble max-w-[200px] text-center">
+            Hi! I'm your AI buddy!
+        </div>
+        <div class="relative cursor-pointer group" onclick="app.aiPet.interact()">
+            <!-- Animated SVG Robot -->
+            <svg id="robot-svg" width="80" height="90" viewBox="0 0 100 120" class="pet-float relative z-10 drop-shadow-2xl transition-transform duration-300 group-hover:scale-110">
+                <!-- Hover Jetpack Flames -->
+                <path d="M40 110 Q50 130 60 110" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" class="animate-pulse" />
+                <path d="M45 110 Q50 120 55 110" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" class="animate-pulse" style="animation-delay: 0.1s" />
+                
+                <!-- Antenna -->
+                <line x1="50" y1="30" x2="50" y2="10" stroke="#9ca3af" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="50" cy="10" r="6" fill="#f87171" class="animate-pulse" />
+                
+                <!-- Head -->
+                <rect x="20" y="30" width="60" height="45" rx="15" fill="#f3f4f6" stroke="#cbd5e1" stroke-width="3"/>
+                <!-- Cheeks -->
+                <circle cx="28" cy="60" r="4" fill="#fca5a5" opacity="0.6"/>
+                <circle cx="72" cy="60" r="4" fill="#fca5a5" opacity="0.6"/>
+                <!-- Screen/Face -->
+                <rect x="28" y="40" width="44" height="25" rx="8" fill="#1e293b" />
+                
+                <!-- Eyes Group (Tracks Mouse) -->
+                <g id="pet-eyes" style="transition: transform 0.1s ease-out">
+                    <ellipse id="eye-left" cx="40" cy="52" rx="4" ry="5" fill="#38bdf8" class="pet-eye" />
+                    <ellipse id="eye-right" cx="60" cy="52" rx="4" ry="5" fill="#38bdf8" class="pet-eye" />
+                </g>
+                
+                <!-- Body -->
+                <path d="M30 80 Q50 90 70 80 L65 110 Q50 115 35 110 Z" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="3"/>
+                
+                <!-- Arms -->
+                <path id="arm-left" d="M20 85 Q5 95 15 105" fill="none" stroke="#94a3b8" stroke-width="5" stroke-linecap="round" style="transform-origin: top; transform-box: fill-box;" class="transition-transform duration-300"/>
+                <path id="arm-right" d="M80 85 Q95 95 85 105" fill="none" stroke="#94a3b8" stroke-width="5" stroke-linecap="round" style="transform-origin: top; transform-box: fill-box;" class="transition-transform duration-300"/>
+            </svg>
+            <!-- Hover Shadow -->
+            <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-16 h-3 bg-black/20 rounded-[100%] blur-[2px] shadow-pulse"></div>
+        </div>
+    </div>
+
+    <!-- Toasts -->
+    <div id="toast-container" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- HUD / Navigation -->
+    <nav class="glass-panel sticky top-0 z-40 shadow-sm border-b border-purple-200">
+        <div class="container mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="app.showScreen('dashboard')">
+                <div class="bg-gradient-to-tr from-purple-600 to-indigo-500 text-white rounded-xl p-2 shadow-md hover:scale-105 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-700 to-indigo-600 tracking-tight hidden sm:block">KidoAssembly</h1>
+            </div>
+            
+            <div class="flex items-center gap-2 sm:gap-4 font-bold text-sm sm:text-base">
+                <!-- Level -->
+                <div class="flex items-center gap-1.5 bg-purple-100 border border-purple-300 px-3 py-1.5 rounded-full shadow-sm text-purple-800 cursor-pointer hover:bg-purple-200 transition" onclick="app.showScreen('profile')">
+                    <span class="text-lg">👑</span> <span class="hidden sm:inline">Lvl</span> <span id="hud-level">1</span>
+                </div>
+                <!-- Stars -->
+                <div class="flex items-center gap-1.5 bg-yellow-100 border border-yellow-300 px-3 py-1.5 rounded-full shadow-sm text-yellow-700 cursor-pointer hover:bg-yellow-200 transition" onclick="app.showScreen('store')">
+                    <span class="text-lg">⭐</span> <span id="hud-stars">0</span>
+                </div>
+                <!-- Energy -->
+                <div class="flex items-center gap-1.5 bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-full shadow-sm text-blue-700 relative group">
+                    <span class="text-lg">⚡</span> <span id="hud-energy">100</span>
+                    <div class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Regenerates over time</div>
+                </div>
+            </div>
+        </div>
+        <!-- Global XP Bar -->
+        <div class="w-full h-1.5 bg-gray-200">
+            <div id="hud-xp-bar" class="h-full bg-gradient-to-r from-green-400 to-emerald-500 progress-bar-fill" style="width: 0%"></div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8 max-w-6xl">
+
+        <!-- SCREEN: SETUP / ONBOARDING -->
+        <div id="screen-setup" class="hidden animate-pop-in max-w-2xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl sm:text-5xl font-black text-purple-900 mb-2">Welcome to KidoAssembly! 🚀</h2>
+                <p class="text-lg text-purple-600 font-medium">Let's set up your profile before we start.</p>
+            </div>
+            
+            <div class="bg-white rounded-3xl shadow-xl p-8 border-t-8 border-purple-500">
+                <h3 class="text-2xl font-black text-gray-800 mb-4">1. Choose Your Avatar</h3>
+                <div class="flex flex-wrap gap-4 justify-center mb-8" id="avatar-selection">
+                    <button onclick="app.selectAvatar('🧑‍🚀')" class="text-5xl p-4 bg-gray-50 rounded-2xl border-4 border-transparent hover:border-purple-300 hover:bg-purple-50 transition avatar-btn">🧑‍🚀</button>
+                    <button onclick="app.selectAvatar('🦸‍♀️')" class="text-5xl p-4 bg-gray-50 rounded-2xl border-4 border-transparent hover:border-purple-300 hover:bg-purple-50 transition avatar-btn">🦸‍♀️</button>
+                    <button onclick="app.selectAvatar('🧙‍♂️')" class="text-5xl p-4 bg-gray-50 rounded-2xl border-4 border-transparent hover:border-purple-300 hover:bg-purple-50 transition avatar-btn">🧙‍♂️</button>
+                    <button onclick="app.selectAvatar('🥷')" class="text-5xl p-4 bg-gray-50 rounded-2xl border-4 border-transparent hover:border-purple-300 hover:bg-purple-50 transition avatar-btn">🥷</button>
+                    <button onclick="app.selectAvatar('🦁')" class="text-5xl p-4 bg-gray-50 rounded-2xl border-4 border-transparent hover:border-purple-300 hover:bg-purple-50 transition avatar-btn">🦁</button>
+                </div>
+
+                <h3 class="text-2xl font-black text-gray-800 mb-4">2. Select Your Grade</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8" id="grade-selection">
+                    <button onclick="app.selectGrade(1)" class="py-3 bg-gray-50 rounded-xl font-bold text-gray-600 border-4 border-transparent hover:border-indigo-300 hover:bg-indigo-50 transition grade-btn">Grade 1</button>
+                    <button onclick="app.selectGrade(2)" class="py-3 bg-gray-50 rounded-xl font-bold text-gray-600 border-4 border-transparent hover:border-indigo-300 hover:bg-indigo-50 transition grade-btn">Grade 2</button>
+                    <button onclick="app.selectGrade(3)" class="py-3 bg-gray-50 rounded-xl font-bold text-gray-600 border-4 border-transparent hover:border-indigo-300 hover:bg-indigo-50 transition grade-btn">Grade 3</button>
+                    <button onclick="app.selectGrade(4)" class="py-3 bg-gray-50 rounded-xl font-bold text-gray-600 border-4 border-transparent hover:border-indigo-300 hover:bg-indigo-50 transition grade-btn">Grade 4</button>
+                    <button onclick="app.selectGrade(5)" class="py-3 bg-gray-50 rounded-xl font-bold text-gray-600 border-4 border-transparent hover:border-indigo-300 hover:bg-indigo-50 transition grade-btn">Grade 5</button>
+                </div>
+
+                <button onclick="app.completeSetup()" class="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black text-2xl py-4 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition disabled:opacity-50 disabled:cursor-not-allowed" id="start-adventure-btn" disabled>
+                    Start Adventure! ✨
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN: DASHBOARD -->
+        <div id="screen-dashboard" class="animate-pop-in">
+            <div class="flex justify-between items-end mb-8">
+                <div>
+                    <h2 class="text-4xl sm:text-5xl font-black text-purple-900 mb-2">Adventure Map 🗺️</h2>
+                    <p class="text-lg text-purple-600 font-medium">Choose a zone to earn XP and Stars.</p>
+                </div>
+                <div class="hidden md:flex gap-3">
+                    <button onclick="app.showScreen('profile')" class="bg-white px-4 py-2 rounded-xl font-bold text-purple-600 shadow border border-purple-100 hover:bg-purple-50 transition">👤 Profile</button>
+                    <button onclick="app.showScreen('store')" class="bg-white px-4 py-2 rounded-xl font-bold text-yellow-600 shadow border border-yellow-100 hover:bg-yellow-50 transition">🛒 Store</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                
+                <!-- Math Game -->
+                <div class="bg-white rounded-3xl shadow-lg border-b-8 border-indigo-500 flex flex-col relative overflow-hidden">
+                    <div class="p-6 flex-grow z-10 relative">
+                        <div class="text-5xl mb-4 p-4 bg-indigo-50 rounded-2xl inline-block shadow-inner">🎯</div>
+                        <h3 class="text-2xl font-black text-gray-800 mb-2">Math Arena</h3>
+                        <p class="text-gray-500 font-medium mb-4">Master your numbers! Addition, subtraction, and multiplication challenges.</p>
+                    </div>
+                    <div class="bg-indigo-50 p-4 border-t border-indigo-100 flex justify-between items-center z-10">
+                        <span class="text-indigo-600 font-bold text-sm">Cost: 5 ⚡</span>
+                        <button onclick="app.mathGame.setup()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-full shadow-md transition-transform hover:scale-105">Play Now</button>
+                    </div>
+                </div>
+
+                <!-- Word Game -->
+                <div class="bg-white rounded-3xl shadow-lg border-b-8 border-emerald-500 flex flex-col relative overflow-hidden">
+                    <div class="p-6 flex-grow z-10 relative">
+                        <div class="text-5xl mb-4 p-4 bg-emerald-50 rounded-2xl inline-block shadow-inner">🧩</div>
+                        <h3 class="text-2xl font-black text-gray-800 mb-2">Word Scramble</h3>
+                        <p class="text-gray-500 font-medium mb-4">Unjumble letters to discover secret words. Enhance your vocabulary.</p>
+                    </div>
+                    <div class="bg-emerald-50 p-4 border-t border-emerald-100 flex justify-between items-center z-10">
+                        <span class="text-emerald-600 font-bold text-sm">Cost: 5 ⚡</span>
+                        <button onclick="app.startGame('word')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-6 rounded-full shadow-md transition-transform hover:scale-105">Play Now</button>
+                    </div>
+                </div>
+
+                <!-- Memory Game -->
+                <div class="bg-white rounded-3xl shadow-lg border-b-8 border-pink-500 flex flex-col relative overflow-hidden">
+                    <div class="p-6 flex-grow z-10 relative">
+                        <div class="text-5xl mb-4 p-4 bg-pink-50 rounded-2xl inline-block shadow-inner">🧠</div>
+                        <h3 class="text-2xl font-black text-gray-800 mb-2">Memory Match</h3>
+                        <p class="text-gray-500 font-medium mb-4">Train your brain! Flip the cards and find all the matching pairs.</p>
+                    </div>
+                    <div class="bg-pink-50 p-4 border-t border-pink-100 flex justify-between items-center z-10">
+                        <span class="text-pink-600 font-bold text-sm">Cost: 10 ⚡</span>
+                        <button onclick="app.startGame('memory')" class="bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-6 rounded-full shadow-md transition-transform hover:scale-105">Play Now</button>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- Mobile Links -->
+            <div class="mt-8 flex justify-center gap-4 md:hidden">
+                <button onclick="app.showScreen('profile')" class="bg-purple-100 px-6 py-3 rounded-xl font-bold text-purple-700 w-1/2">Profile</button>
+                <button onclick="app.showScreen('store')" class="bg-yellow-100 px-6 py-3 rounded-xl font-bold text-yellow-700 w-1/2">Store</button>
+            </div>
+        </div>
+
+        <!-- SCREEN: PROFILE -->
+        <div id="screen-profile" class="hidden animate-pop-in">
+            <button onclick="app.showScreen('dashboard')" class="mb-6 flex items-center gap-2 text-purple-600 font-bold hover:text-purple-800 transition-colors"><span>←</span> Back to Map</button>
+            
+            <div class="bg-white rounded-3xl shadow-xl overflow-hidden max-w-3xl mx-auto">
+                <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-8 text-center text-white relative">
+                    <div id="profile-avatar" class="text-7xl mb-4 bg-white/20 inline-block p-6 rounded-full border-4 border-white/30 shadow-lg cursor-pointer hover:scale-105 transition" onclick="app.resetSetup()" title="Click to change avatar/class">🧑‍🚀</div>
+                    <h2 class="text-3xl font-black mb-1">Student Profile</h2>
+                    <p class="text-purple-200 font-bold text-lg">Grade <span id="profile-grade-display">1</span> • Level <span id="profile-level">1</span></p>
+                </div>
+                <div class="p-8">
+                    <div class="mb-8">
+                        <div class="flex justify-between text-sm font-bold text-gray-500 mb-2">
+                            <span>XP Progress</span>
+                            <span id="profile-xp-text">0 / 100 XP</span>
+                        </div>
+                        <div class="h-4 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+                            <div id="profile-xp-bar" class="h-full bg-green-500 progress-bar-fill w-0"></div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-xl font-black text-gray-800 mb-4 border-b pb-2">Learning Stats</h3>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div class="bg-indigo-50 p-4 rounded-2xl">
+                            <div class="text-3xl mb-1">🎯</div>
+                            <div class="text-2xl font-black text-indigo-700" id="stat-math">0</div>
+                            <div class="text-xs font-bold text-indigo-400 uppercase">Math Solved</div>
+                        </div>
+                        <div class="bg-emerald-50 p-4 rounded-2xl">
+                            <div class="text-3xl mb-1">🧩</div>
+                            <div class="text-2xl font-black text-emerald-700" id="stat-word">0</div>
+                            <div class="text-xs font-bold text-emerald-400 uppercase">Words Found</div>
+                        </div>
+                        <div class="bg-pink-50 p-4 rounded-2xl">
+                            <div class="text-3xl mb-1">🧠</div>
+                            <div class="text-2xl font-black text-pink-700" id="stat-memory">0</div>
+                            <div class="text-xs font-bold text-pink-400 uppercase">Matches Made</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: STORE -->
+        <div id="screen-store" class="hidden animate-pop-in">
+             <button onclick="app.showScreen('dashboard')" class="mb-6 flex items-center gap-2 text-yellow-600 font-bold hover:text-yellow-800 transition-colors"><span>←</span> Back to Map</button>
+             
+             <div class="text-center mb-8">
+                <h2 class="text-4xl font-black text-yellow-600 mb-2">Star Shop 🛒</h2>
+                <p class="text-gray-500 font-medium">Spend your hard-earned stars on cool badges!</p>
+             </div>
+
+             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto" id="store-items">
+                <!-- Injected via JS -->
+             </div>
+        </div>
+
+        <!-- SCREEN: MATH SHOOTER -->
+        <div id="screen-math" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="app.showScreen('dashboard')" class="flex items-center gap-2 text-indigo-600 font-bold hover:text-indigo-800 transition-colors"><span>←</span> Quit</button>
+                <div class="bg-indigo-100 text-indigo-800 px-4 py-1 rounded-full font-bold">Score: <span id="math-score">0</span></div>
+            </div>
+            
+            <!-- Setup Phase -->
+            <div id="math-setup" class="max-w-md mx-auto bg-white rounded-3xl shadow-xl p-8 text-center border-4 border-indigo-100">
+                <h2 class="text-2xl font-black text-gray-800 mb-6">Choose Operation</h2>
+                <div class="grid gap-4">
+                    <button onclick="app.startGame('math', '+')" class="bg-indigo-50 hover:bg-indigo-500 hover:text-white text-indigo-700 font-black text-xl py-4 rounded-2xl transition border-2 border-indigo-100 hover:border-indigo-500">➕ Addition</button>
+                    <button onclick="app.startGame('math', '-')" class="bg-indigo-50 hover:bg-indigo-500 hover:text-white text-indigo-700 font-black text-xl py-4 rounded-2xl transition border-2 border-indigo-100 hover:border-indigo-500">➖ Subtraction</button>
+                    <button onclick="app.startGame('math', '*')" class="bg-indigo-50 hover:bg-indigo-500 hover:text-white text-indigo-700 font-black text-xl py-4 rounded-2xl transition border-2 border-indigo-100 hover:border-indigo-500">✖️ Multiplication</button>
+                </div>
+            </div>
+
+            <!-- Gameplay Phase -->
+            <div id="math-game-container" class="max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl p-8 sm:p-12 text-center relative border-4 border-indigo-100 hidden">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-400 mb-2">Solve it!</h2>
+                <div id="math-problem" class="text-6xl sm:text-8xl font-black text-indigo-900 mb-10 tracking-widest drop-shadow-sm"></div>
+                <div id="math-options" class="grid grid-cols-2 gap-4 sm:gap-6"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN: WORD SCRAMBLE -->
+        <div id="screen-word" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="app.showScreen('dashboard')" class="flex items-center gap-2 text-emerald-600 font-bold hover:text-emerald-800 transition-colors"><span>←</span> Quit</button>
+                <button onclick="app.wordGame.useHint()" class="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-black px-4 py-2 rounded-full shadow-md transition flex items-center gap-2">
+                    💡 Hint (10 ⭐)
+                </button>
+            </div>
+
+            <div class="max-w-2xl mx-auto">
+                <div id="word-game-container" class="bg-white rounded-3xl shadow-2xl p-8 sm:p-12 text-center relative border-4 border-emerald-100">
+                    <h2 class="text-xl sm:text-2xl font-bold text-gray-500 mb-6">Unscramble the word!</h2>
+                    
+                    <div id="word-slots" class="flex flex-wrap justify-center gap-2 sm:gap-3 mb-10 min-h-[70px]"></div>
+
+                    <div class="bg-emerald-50 rounded-2xl p-6 border-2 border-emerald-100 border-dashed">
+                        <p class="text-sm font-bold text-emerald-600/50 uppercase mb-4 tracking-wider">Tap letters to move them</p>
+                        <div id="word-letters" class="flex flex-wrap justify-center gap-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: MEMORY MATCH -->
+        <div id="screen-memory" class="hidden">
+             <div class="flex justify-between items-center mb-6">
+                <button onclick="app.showScreen('dashboard')" class="flex items-center gap-2 text-pink-600 font-bold hover:text-pink-800 transition-colors"><span>←</span> Quit</button>
+                <div class="bg-pink-100 text-pink-800 px-4 py-1 rounded-full font-bold">Matches: <span id="memory-matches">0</span>/6</div>
+            </div>
+
+            <div class="max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border-4 border-pink-100 text-center">
+                <div id="memory-grid" class="grid grid-cols-4 gap-3 sm:gap-4 perspective">
+                    <!-- Cards injected here -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        /**
+         * KidoAssembly - Complete Feature Set
+         */
+        const app = {
+            // --- CORE STATE ---
+            state: {
+                avatar: localStorage.getItem('ka_avatar') || null,
+                grade: parseInt(localStorage.getItem('ka_grade')) || null,
+                level: parseInt(localStorage.getItem('ka_level')) || 1,
+                xp: parseInt(localStorage.getItem('ka_xp')) || 0,
+                stars: parseInt(localStorage.getItem('ka_stars')) || 50, // Start with 50 for fun
+                energy: parseInt(localStorage.getItem('ka_energy')) || 100,
+                stats: JSON.parse(localStorage.getItem('ka_stats')) || { math: 0, word: 0, memory: 0 },
+                inventory: JSON.parse(localStorage.getItem('ka_inventory')) || [],
+                lastEnergyUpdate: parseInt(localStorage.getItem('ka_last_energy')) || Date.now()
+            },
+
+            // Constants
+            maxEnergy: 100,
+            energyRestoreRate: 1, // 1 energy per minute
+            badges: [
+                { id: 'b1', name: 'Math Whiz', icon: '🤓', cost: 50 },
+                { id: 'b2', name: 'Word Ninja', icon: '🥷', cost: 50 },
+                { id: 'b3', name: 'Star Catcher', icon: '🌟', cost: 100 },
+                { id: 'b4', name: 'Brainiac', icon: '👽', cost: 200 }
+            ],
+
+            init() {
+                this.calculateOfflineEnergy();
+                this.updateHUD();
+                
+                if (!this.state.avatar || !this.state.grade) {
+                    this.showScreen('setup');
+                } else {
+                    this.showScreen('dashboard');
+                    this.aiPet.init();
+                }
+                
+                // Energy Tick (Every 60s)
+                setInterval(() => {
+                    if (this.state.energy < this.maxEnergy) {
+                        this.updateState({ energy: 1 });
+                    }
+                    localStorage.setItem('ka_last_energy', Date.now());
+                }, 60000);
+            },
+
+            // --- ONBOARDING (CLASS & AVATAR) ---
+            tempSetup: { avatar: null, grade: null },
+            
+            selectAvatar(avatar) {
+                this.tempSetup.avatar = avatar;
+                document.querySelectorAll('.avatar-btn').forEach(btn => {
+                    btn.classList.remove('border-purple-500', 'bg-purple-100');
+                    if (btn.innerText === avatar) btn.classList.add('border-purple-500', 'bg-purple-100');
+                });
+                this.checkSetupReady();
+            },
+
+            selectGrade(grade) {
+                this.tempSetup.grade = grade;
+                document.querySelectorAll('.grade-btn').forEach(btn => {
+                    btn.classList.remove('border-indigo-500', 'bg-indigo-100', 'text-indigo-800');
+                    if (btn.innerText.includes(grade)) btn.classList.add('border-indigo-500', 'bg-indigo-100', 'text-indigo-800');
+                });
+                this.checkSetupReady();
+            },
+
+            checkSetupReady() {
+                const btn = document.getElementById('start-adventure-btn');
+                if (this.tempSetup.avatar && this.tempSetup.grade) {
+                    btn.disabled = false;
+                }
+            },
+
+            completeSetup() {
+                this.state.avatar = this.tempSetup.avatar;
+                this.state.grade = this.tempSetup.grade;
+                this.saveState();
+                this.showScreen('dashboard');
+                this.aiPet.init();
+                this.showToast("Profile set! Let's go!", "success");
+            },
+
+            resetSetup() {
+                if(confirm("Do you want to change your Avatar and Grade?")) {
+                    this.state.avatar = null;
+                    this.state.grade = null;
+                    this.saveState();
+                    document.getElementById('ai-pet').classList.add('hidden');
+                    this.showScreen('setup');
+                }
+            },
+
+            // --- AI PET COMPANION ---
+            aiPet: {
+                quotes: [
+                    "You're doing great! 🌟",
+                    "Keep it up! 🚀",
+                    "Learning is fun! 🧠",
+                    "Need a hint? 🤔",
+                    "Wow, you're smart! 🎓"
+                ],
+                init() {
+                    const petEl = document.getElementById('ai-pet');
+                    petEl.classList.remove('hidden');
+                    setTimeout(() => this.speak("Welcome back! Ready to learn?"), 1000);
+                    
+                    // Random occasional speech
+                    setInterval(() => {
+                        if (Math.random() > 0.7 && app.state.currentScreen !== 'setup') {
+                            this.speak(this.quotes[Math.floor(Math.random() * this.quotes.length)]);
+                        }
+                    }, 45000);
+
+                    // Eye tracking logic (Mouse follower)
+                    document.addEventListener('mousemove', (e) => {
+                        const eyes = document.getElementById('pet-eyes');
+                        if(!eyes || app.state.currentScreen === 'setup') return;
+                        
+                        const rect = eyes.getBoundingClientRect();
+                        const centerX = rect.left + rect.width / 2;
+                        const centerY = rect.top + rect.height / 2;
+                        
+                        const mouseX = e.clientX;
+                        const mouseY = e.clientY;
+                        
+                        const angle = Math.atan2(mouseY - centerY, mouseX - centerX);
+                        // Limit how far the eyes can move (max 4 pixels offset)
+                        const distance = Math.min(4, Math.hypot(mouseX - centerX, mouseY - centerY) / 60); 
+                        
+                        const xOffset = Math.cos(angle) * distance;
+                        const yOffset = Math.sin(angle) * distance;
+                        
+                        eyes.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+                    });
+                },
+                speak(msg, duration = 3000) {
+                    const bubble = document.getElementById('pet-speech');
+                    bubble.innerText = msg;
+                    bubble.classList.remove('opacity-0', 'scale-0');
+                    bubble.classList.add('opacity-100', 'scale-100');
+                    
+                    clearTimeout(this.timeout);
+                    this.timeout = setTimeout(() => {
+                        bubble.classList.remove('opacity-100', 'scale-100');
+                        bubble.classList.add('opacity-0', 'scale-0');
+                    }, duration);
+                },
+                interact() {
+                    this.speak("Hehe, that tickles! 🤖");
+                    
+                    const svg = document.getElementById('robot-svg');
+                    const leftEye = document.getElementById('eye-left');
+                    const rightEye = document.getElementById('eye-right');
+                    const leftArm = document.getElementById('arm-left');
+                    const rightArm = document.getElementById('arm-right');
+
+                    // Animation classes for interaction
+                    svg.classList.add('animate-spin-happy');
+                    leftEye.classList.add('pet-eye-happy');
+                    rightEye.classList.add('pet-eye-happy');
+                    leftArm.style.transform = 'rotate(45deg)';
+                    rightArm.style.transform = 'rotate(-45deg)';
+
+                    setTimeout(() => {
+                        svg.classList.remove('animate-spin-happy');
+                        leftEye.classList.remove('pet-eye-happy');
+                        rightEye.classList.remove('pet-eye-happy');
+                        leftArm.style.transform = 'rotate(0deg)';
+                        rightArm.style.transform = 'rotate(0deg)';
+                    }, 600);
+
+                    app.updateState({ xp: 1 }); // Give a tiny secret XP for petting!
+                }
+            },
+
+            // --- UI / NAVIGATION ---
+            showScreen(screenId) {
+                this.state.currentScreen = screenId;
+                ['setup', 'dashboard', 'profile', 'store', 'math', 'word', 'memory'].forEach(id => {
+                    const el = document.getElementById(`screen-${id}`);
+                    if (el) el.classList.add('hidden');
+                });
+                
+                const el = document.getElementById(`screen-${screenId}`);
+                if (el) {
+                    el.classList.remove('hidden');
+                    // Retrigger animation
+                    el.classList.remove('animate-pop-in');
+                    void el.offsetWidth;
+                    el.classList.add('animate-pop-in');
+                }
+
+                // Screen specific logic
+                if(screenId === 'profile') this.renderProfile();
+                if(screenId === 'store') this.renderStore();
+            },
+
+            startGame(game, mode = null) {
+                const costs = { math: 5, word: 5, memory: 10 };
+                
+                if (this.state.energy < costs[game]) {
+                    this.showToast(`Not enough energy! Need ${costs[game]} ⚡`, "error");
+                    return;
+                }
+
+                this.updateState({ energy: -costs[game] });
+                this.showScreen(game);
+
+                if (game === 'math') this.mathGame.start(mode);
+                if (game === 'word') this.wordGame.start();
+                if (game === 'memory') this.memoryGame.start();
+            },
+
+            // --- STATE MANAGEMENT ---
+            updateState({ xp = 0, stars = 0, energy = 0, statKey = null }) {
+                this.state.stars += stars;
+                this.state.energy = Math.max(0, Math.min(this.maxEnergy, this.state.energy + energy));
+                
+                if (statKey) this.state.stats[statKey]++;
+
+                if (xp > 0) {
+                    this.state.xp += xp;
+                    this.checkLevelUp();
+                }
+                
+                this.saveState();
+                this.updateHUD();
+            },
+
+            checkLevelUp() {
+                const xpNeeded = this.state.level * 100;
+                if (this.state.xp >= xpNeeded) {
+                    this.state.xp -= xpNeeded;
+                    this.state.level++;
+                    
+                    this.state.energy = this.maxEnergy; // Refill energy on level up
+                    
+                    // Massive Celebration
+                    this.showToast(`🎉 LEVEL UP! You are now Level ${this.state.level}! 🎉`, "reward");
+                    document.body.classList.add('level-up-glow');
+                    setTimeout(() => document.body.classList.remove('level-up-glow'), 2000);
+                    
+                    // Recursive check in case they earned a TON of XP
+                    this.checkLevelUp();
+                }
+            },
+
+            saveState() {
+                localStorage.setItem('ka_avatar', this.state.avatar);
+                localStorage.setItem('ka_grade', this.state.grade);
+                localStorage.setItem('ka_level', this.state.level);
+                localStorage.setItem('ka_xp', this.state.xp);
+                localStorage.setItem('ka_stars', this.state.stars);
+                localStorage.setItem('ka_energy', this.state.energy);
+                localStorage.setItem('ka_stats', JSON.stringify(this.state.stats));
+                localStorage.setItem('ka_inventory', JSON.stringify(this.state.inventory));
+            },
+
+            calculateOfflineEnergy() {
+                const last = this.state.lastEnergyUpdate;
+                const now = Date.now();
+                const diffMins = Math.floor((now - last) / 60000);
+                if (diffMins > 0 && this.state.energy < this.maxEnergy) {
+                    this.state.energy = Math.min(this.maxEnergy, this.state.energy + diffMins * this.energyRestoreRate);
+                    this.saveState();
+                }
+            },
+
+            // --- HUD & RENDERERS ---
+            updateHUD() {
+                document.getElementById('hud-level').innerText = this.state.level;
+                this.animateValue('hud-stars', parseInt(document.getElementById('hud-stars').innerText), this.state.stars, 500);
+                document.getElementById('hud-energy').innerText = this.state.energy;
+
+                const xpNeeded = this.state.level * 100;
+                const progressPct = (this.state.xp / xpNeeded) * 100;
+                document.getElementById('hud-xp-bar').style.width = `${progressPct}%`;
+            },
+
+            renderProfile() {
+                document.getElementById('profile-level').innerText = this.state.level;
+                if(this.state.avatar) document.getElementById('profile-avatar').innerText = this.state.avatar;
+                if(this.state.grade) document.getElementById('profile-grade-display').innerText = this.state.grade;
+                
+                const xpNeeded = this.state.level * 100;
+                document.getElementById('profile-xp-text').innerText = `${this.state.xp} / ${xpNeeded} XP`;
+                document.getElementById('profile-xp-bar').style.width = `${(this.state.xp / xpNeeded) * 100}%`;
+
+                document.getElementById('stat-math').innerText = this.state.stats.math;
+                document.getElementById('stat-word').innerText = this.state.stats.word;
+                document.getElementById('stat-memory').innerText = this.state.stats.memory;
+            },
+
+            renderStore() {
+                const container = document.getElementById('store-items');
+                container.innerHTML = '';
+                
+                this.badges.forEach(badge => {
+                    const isOwned = this.state.inventory.includes(badge.id);
+                    const btn = document.createElement('div');
+                    btn.className = `bg-white p-6 rounded-3xl shadow-md border-2 text-center ${isOwned ? 'border-green-400 opacity-70' : 'border-gray-100 hover:border-yellow-400 hover:-translate-y-1 transition'}`;
+                    
+                    btn.innerHTML = `
+                        <div class="text-5xl mb-3">${badge.icon}</div>
+                        <h4 class="font-black text-gray-800">${badge.name}</h4>
+                        ${isOwned 
+                            ? `<div class="mt-3 text-sm font-bold text-green-600 bg-green-50 rounded-full py-1">Owned ✓</div>` 
+                            : `<button onclick="app.buyItem('${badge.id}', ${badge.cost})" class="mt-3 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold py-1.5 px-4 rounded-full text-sm w-full transition">Buy (${badge.cost} ⭐)</button>`
+                        }
+                    `;
+                    container.appendChild(btn);
+                });
+            },
+
+            buyItem(id, cost) {
+                if (this.state.stars >= cost) {
+                    this.updateState({ stars: -cost });
+                    this.state.inventory.push(id);
+                    this.saveState();
+                    this.renderStore();
+                    this.showToast("Item purchased successfully!", "success");
+                } else {
+                    this.showToast("Not enough stars! Keep playing.", "error");
+                }
+            },
+
+            // Helpers
+            animateValue(id, start, end, duration) {
+                if (start === end || isNaN(start)) { document.getElementById(id).innerText = end; return; }
+                let startTimestamp = null;
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    document.getElementById(id).innerText = Math.floor(progress * (end - start) + start);
+                    if (progress < 1) window.requestAnimationFrame(step);
+                };
+                window.requestAnimationFrame(step);
+            },
+
+            showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                const colors = {
+                    success: 'bg-green-500 text-white shadow-green-500/50',
+                    error: 'bg-red-500 text-white shadow-red-500/50',
+                    reward: 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white shadow-yellow-500/50'
+                };
+                toast.className = `toast px-6 py-3 rounded-full font-bold shadow-lg ${colors[type]}`;
+                toast.innerHTML = message;
+                container.appendChild(toast);
+                setTimeout(() => { if(container.contains(toast)) container.removeChild(toast); }, 3000);
+            },
+
+            // ==========================================
+            // GAME 1: MATH SHOOTER
+            // ==========================================
+            mathGame: {
+                op: '+', score: 0, current: null,
+
+                setup() {
+                    document.getElementById('math-setup').classList.remove('hidden');
+                    document.getElementById('math-game-container').classList.add('hidden');
+                    app.showScreen('math');
+                },
+
+                start(operation) {
+                    this.op = operation;
+                    this.score = 0;
+                    document.getElementById('math-score').innerText = this.score;
+                    document.getElementById('math-setup').classList.add('hidden');
+                    document.getElementById('math-game-container').classList.remove('hidden');
+                    this.next();
+                },
+
+                next() {
+                    let n1, n2, ans;
+                    const level = app.state.level;
+                    const grade = app.state.grade || 1;
+                    const maxNum = 5 + (grade * 5) + (level * 2); // Scales with grade and level
+
+                    if (this.op === '+') {
+                        n1 = Math.floor(Math.random() * maxNum) + 1;
+                        n2 = Math.floor(Math.random() * maxNum) + 1;
+                        ans = n1 + n2;
+                    } else if (this.op === '-') {
+                        n1 = Math.floor(Math.random() * maxNum) + 5;
+                        n2 = Math.floor(Math.random() * n1) + 1; 
+                        ans = n1 - n2;
+                    } else {
+                        n1 = Math.floor(Math.random() * 10) + 1;
+                        n2 = Math.floor(Math.random() * 10) + 1;
+                        ans = n1 * n2;
+                    }
+
+                    this.current = { q: `${n1} ${this.op} ${n2}`, a: ans };
+                    document.getElementById('math-problem').innerText = `${this.current.q} = ?`;
+                    this.renderOptions(ans);
+                },
+
+                renderOptions(correct) {
+                    let opts = [correct];
+                    while(opts.length < 4) {
+                        let offset = Math.floor(Math.random() * 10) - 4;
+                        if(offset === 0) offset = 2;
+                        let w = correct + offset;
+                        if(w >= 0 && !opts.includes(w)) opts.push(w);
+                    }
+                    opts.sort(() => Math.random() - 0.5);
+
+                    const cont = document.getElementById('math-options');
+                    cont.innerHTML = '';
+                    opts.forEach(opt => {
+                        const b = document.createElement('button');
+                        b.className = "bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 font-black text-3xl py-8 rounded-3xl shadow-sm border-4 border-indigo-100 hover:border-indigo-600 transition-all transform hover:-translate-y-1";
+                        b.innerText = opt;
+                        b.onclick = (e) => this.check(opt, e.target);
+                        cont.appendChild(b);
+                    });
+                },
+
+                check(sel, btn) {
+                    const cont = document.getElementById('math-game-container');
+                    if(sel === this.current.a) {
+                        btn.className = "bg-green-500 text-white font-black text-3xl py-8 rounded-3xl shadow-sm border-4 border-green-600 transition-all";
+                        this.score++;
+                        document.getElementById('math-score').innerText = this.score;
+                        app.updateState({ xp: 15, stars: 2, statKey: 'math' });
+                        app.aiPet.speak("Awesome Math! 🎯");
+                        setTimeout(() => this.next(), 600);
+                    } else {
+                        btn.className = "bg-red-500 text-white font-black text-3xl py-8 rounded-3xl shadow-sm border-4 border-red-600 transition-all";
+                        cont.classList.add('animate-shake');
+                        app.aiPet.speak("Oops, try again! 😅");
+                        setTimeout(() => cont.classList.remove('animate-shake'), 400);
+                    }
+                }
+            },
+
+            // ==========================================
+            // GAME 2: WORD SCRAMBLE
+            // ==========================================
+            wordGame: {
+                words: ['PLANET', 'ROCKET', 'SCIENCE', 'GALAXY', 'ROBOT', 'OXYGEN', 'NATURE', 'OCEAN', 'ANIMAL', 'FOREST'],
+                word: '', scrambled: [], selected: [],
+
+                start() {
+                    const r = Math.floor(Math.random() * this.words.length);
+                    this.word = this.words[r];
+                    this.scrambled = this.word.split('').sort(() => Math.random() - 0.5);
+                    while(this.scrambled.join('') === this.word) this.scrambled.sort(() => Math.random() - 0.5);
+                    this.selected = [];
+                    this.render();
+                },
+
+                render() {
+                    const slots = document.getElementById('word-slots');
+                    const letters = document.getElementById('word-letters');
+                    slots.innerHTML = ''; letters.innerHTML = '';
+
+                    for (let i = 0; i < this.word.length; i++) {
+                        const slot = document.createElement('div');
+                        if (i < this.selected.length) {
+                            slot.className = "w-12 h-14 sm:w-16 sm:h-20 bg-emerald-500 text-white rounded-xl shadow-md border-b-4 border-emerald-700 flex items-center justify-center text-3xl font-black cursor-pointer hover:bg-red-500 transition animate-pop-in";
+                            slot.innerText = this.selected[i].char;
+                            slot.onclick = () => this.deselect(i);
+                        } else {
+                            slot.className = "w-12 h-14 sm:w-16 sm:h-20 bg-gray-100 rounded-xl border-b-4 border-gray-300 flex items-center justify-center";
+                        }
+                        slots.appendChild(slot);
+                    }
+
+                    this.scrambled.forEach((char, idx) => {
+                        const btn = document.createElement('button');
+                        if (char) {
+                            btn.className = "w-12 h-14 sm:w-14 sm:h-16 bg-white text-emerald-700 rounded-xl shadow-md border-b-4 border-emerald-200 flex items-center justify-center text-2xl font-black hover:-translate-y-1 transition";
+                            btn.innerText = char;
+                            btn.onclick = () => this.select(char, idx);
+                        } else {
+                            btn.className = "w-12 h-14 sm:w-14 sm:h-16 opacity-0 cursor-default";
+                            btn.disabled = true;
+                        }
+                        letters.appendChild(btn);
+                    });
+                },
+
+                select(char, idx) {
+                    this.scrambled[idx] = null;
+                    this.selected.push({ char, oIdx: idx });
+                    this.render();
+                    this.check();
+                },
+
+                deselect(selIdx) {
+                    const item = this.selected.splice(selIdx, 1)[0];
+                    this.scrambled[item.oIdx] = item.char;
+                    this.render();
+                },
+
+                useHint() {
+                    if(app.state.stars >= 10 && this.selected.length < this.word.length) {
+                        app.updateState({ stars: -10 });
+                        // Find correct next letter
+                        const neededChar = this.word[this.selected.length];
+                        const sIdx = this.scrambled.findIndex(c => c === neededChar);
+                        if(sIdx !== -1) this.select(neededChar, sIdx);
+                    } else if (app.state.stars < 10) {
+                        app.showToast("Not enough stars for a hint!", "error");
+                    }
+                },
+
+                check() {
+                    if (this.selected.length === this.word.length) {
+                        const guess = this.selected.map(s => s.char).join('');
+                        const cont = document.getElementById('word-game-container');
+                        if (guess === this.word) {
+                            app.updateState({ xp: 30, stars: 5, statKey: 'word' });
+                            app.showToast("Brilliant! +5 ⭐ +30 XP", "reward");
+                            app.aiPet.speak("Great spelling! 📚");
+                            const children = document.getElementById('word-slots').children;
+                            for(let c of children) { c.classList.replace('bg-emerald-500', 'bg-yellow-400'); c.classList.replace('border-emerald-700', 'border-yellow-600'); }
+                            setTimeout(() => this.start(), 1500);
+                        } else {
+                            cont.classList.add('animate-shake');
+                            app.aiPet.speak("Not quite! Let's unjumble! 🧩");
+                            setTimeout(() => {
+                                cont.classList.remove('animate-shake');
+                                // Reset entirely
+                                this.selected.forEach(s => this.scrambled[s.oIdx] = s.char);
+                                this.selected = [];
+                                this.render();
+                            }, 500);
+                        }
+                    }
+                }
+            },
+
+            // ==========================================
+            // GAME 3: MEMORY MATCH
+            // ==========================================
+            memoryGame: {
+                icons: ['🐶', '🐱', '🦊', '🐸', '🐼', '🐯'],
+                cards: [], flipped: [], matches: 0, locked: false,
+
+                start() {
+                    this.matches = 0;
+                    this.flipped = [];
+                    this.locked = false;
+                    document.getElementById('memory-matches').innerText = '0';
+                    
+                    // Duplicate and shuffle
+                    let deck = [...this.icons, ...this.icons].sort(() => Math.random() - 0.5);
+                    this.cards = deck.map((icon, i) => ({ id: i, icon, isFlipped: false, isMatched: false }));
+                    
+                    this.render();
+                },
+
+                render() {
+                    const grid = document.getElementById('memory-grid');
+                    grid.innerHTML = '';
+                    
+                    this.cards.forEach((c, i) => {
+                        const el = document.createElement('div');
+                        el.className = `card h-24 sm:h-32 cursor-pointer ${c.isFlipped || c.isMatched ? 'flipped' : ''}`;
+                        el.innerHTML = `
+                            <div class="card-inner w-full h-full relative shadow-md rounded-2xl">
+                                <div class="card-front bg-pink-100 rounded-2xl flex items-center justify-center border-4 border-pink-200 hover:bg-pink-200 transition text-4xl">❓</div>
+                                <div class="card-back bg-white rounded-2xl flex items-center justify-center border-4 border-pink-500 text-5xl">${c.icon}</div>
+                            </div>
+                        `;
+                        if (!c.isFlipped && !c.isMatched) el.onclick = () => this.flip(i);
+                        grid.appendChild(el);
+                    });
+                },
+
+                flip(idx) {
+                    if(this.locked) return;
+                    this.cards[idx].isFlipped = true;
+                    this.flipped.push(idx);
+                    this.render();
+
+                    if(this.flipped.length === 2) {
+                        this.locked = true;
+                        this.check();
+                    }
+                },
+
+                check() {
+                    const [i1, i2] = this.flipped;
+                    if (this.cards[i1].icon === this.cards[i2].icon) {
+                        // Match
+                        this.cards[i1].isMatched = true;
+                        this.cards[i2].isMatched = true;
+                        this.matches++;
+                        document.getElementById('memory-matches').innerText = this.matches;
+                        this.flipped = [];
+                        this.locked = false;
+                        
+                        app.aiPet.speak("It's a Match! 🧠");
+                        
+                        if(this.matches === this.icons.length) {
+                            setTimeout(() => {
+                                app.updateState({ xp: 50, stars: 10, statKey: 'memory' });
+                                app.showToast("Perfect Memory! +10 ⭐ +50 XP", "reward");
+                                setTimeout(() => this.start(), 2000);
+                            }, 500);
+                        }
+                    } else {
+                        // No Match
+                        setTimeout(() => {
+                            this.cards[i1].isFlipped = false;
+                            this.cards[i2].isFlipped = false;
+                            this.flipped = [];
+                            this.locked = false;
+                            this.render();
+                        }, 1000);
+                    }
+                }
+            }
+        };
+
+        // Boot
+        document.addEventListener('DOMContentLoaded', () => app.init());
+
+    </script>
+</body>
+</html>
